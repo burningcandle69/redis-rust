@@ -1,6 +1,7 @@
 mod redis;
 
 use std::net::TcpListener;
+use std::thread;
 use redis::Redis;
 
 fn main() -> std::io::Result<()> {
@@ -11,8 +12,10 @@ fn main() -> std::io::Result<()> {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                let mut redis = Redis::new(Box::new(stream));
-                redis.handle()?;
+                thread::spawn(|| -> std::io::Result<()> {
+                    let mut redis = Redis::new(Box::new(stream));
+                    redis.handle()
+                });
                 println!("accepted new connection");
             }
             Err(e) => {

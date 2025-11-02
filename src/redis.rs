@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
-pub trait ReadWrite: Read + Write {}
+pub trait ReadWrite: Read + Write  {}
 
 impl ReadWrite for TcpStream {}
 
