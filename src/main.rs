@@ -1,14 +1,13 @@
 mod redis;
+mod resp;
 
+use redis::Redis;
 use std::net::TcpListener;
 use std::thread;
-use redis::Redis;
 
 fn main() -> std::io::Result<()> {
-    println!("Logs from your program will appear here!");
-
     let listener = TcpListener::bind("127.0.0.1:6379")?;
-    
+
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
@@ -23,6 +22,6 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }
