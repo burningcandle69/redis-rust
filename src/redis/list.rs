@@ -83,7 +83,7 @@ impl Redis {
             sleep(Duration::from_millis(1));
         }
 
-        let resp = RESP::null_bulk_string();
+        let resp = RESP::null_array();
         write!(self.io, "{resp}")
     }
 
