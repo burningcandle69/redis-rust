@@ -1,8 +1,8 @@
 use super::Redis;
+use super::Command;
 use super::errors::{out_of_range, syntax_error, wrong_num_arguments, wrong_type};
 use crate::redis::value::Value;
 use crate::resp::RESP;
-use std::collections::VecDeque;
 use std::ops::Add;
 use std::time::Duration;
 
@@ -14,7 +14,7 @@ impl Redis {
     /// SET key value [NX | XX] [GET] [EX seconds | PX milliseconds |
     ///   EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL]
     /// ```
-    pub fn set(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn set(&mut self, mut args: Command) -> std::io::Result<()> {
         let err = || wrong_num_arguments("set");
         let mut store = self.store.lock().unwrap();
         let key = args.pop_front().ok_or(err())?.hashable()?;
@@ -56,7 +56,7 @@ impl Redis {
     /// ```
     /// GET key
     /// ```
-    pub fn get(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn get(&mut self, mut args: Command) -> std::io::Result<()> {
         self.remove_expired();
         let store = self.store.lock().unwrap();
 
@@ -79,7 +79,7 @@ impl Redis {
     /// ```
     /// INCR key
     /// ```
-    pub fn incr(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn incr(&mut self, mut args: Command) -> std::io::Result<()> {
         let key = args
             .pop_front()
             .ok_or(wrong_num_arguments("incr"))?

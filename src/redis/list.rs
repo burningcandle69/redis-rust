@@ -1,8 +1,8 @@
 use super::Redis;
+use super::Command;
 use super::errors::{syntax_error, wrong_num_arguments, wrong_type};
 use super::value::Value;
 use crate::resp::RESP;
-use std::collections::VecDeque;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -20,7 +20,7 @@ impl Redis {
     /// ```
     /// RPUSH key element [element ...]
     /// ```
-    pub fn rpush(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn rpush(&mut self, mut args: Command) -> std::io::Result<()> {
         let mut store = self.store.lock().unwrap();
         let key = args
             .pop_front()
@@ -49,7 +49,7 @@ impl Redis {
     /// ```
     /// LPUSH key element [element ...]
     /// ```
-    pub fn lpush(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn lpush(&mut self, mut args: Command) -> std::io::Result<()> {
         let mut store = self.store.lock().unwrap();
         let key = args
             .pop_front()
@@ -77,7 +77,7 @@ impl Redis {
     /// ```
     /// LPOP key [count]
     /// ```
-    pub fn lpop(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn lpop(&mut self, mut args: Command) -> std::io::Result<()> {
         let key = args
             .pop_front()
             .ok_or(wrong_num_arguments("lpop"))?
@@ -116,7 +116,7 @@ impl Redis {
     /// ```
     /// BLPOP key [key ...] timeout
     /// ```
-    pub fn blpop(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn blpop(&mut self, mut args: Command) -> std::io::Result<()> {
         let err = || wrong_num_arguments("blpop");
 
         let key = args.pop_front().ok_or(err())?.hashable()?;
@@ -161,7 +161,7 @@ impl Redis {
     /// ```
     /// LRANGE key start stop
     /// ```
-    pub fn lrange(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn lrange(&mut self, mut args: Command) -> std::io::Result<()> {
         let err = || wrong_num_arguments("lrange");
 
         let mut store = self.store.lock().unwrap();
@@ -210,7 +210,7 @@ impl Redis {
     /// ```
     /// LLEN key
     /// ```
-    pub fn llen(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn llen(&mut self, mut args: Command) -> std::io::Result<()> {
         let store = self.store.lock().unwrap();
         let key = args
             .pop_front()

@@ -1,9 +1,9 @@
-use super::Redis;
+use super::{Redis, Command};
 use super::errors::{syntax_error, wrong_num_arguments, wrong_type};
 use super::utils::make_io_error;
 use super::value::{StreamEntry, StreamEntryID, Value};
 use crate::resp::RESP;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -15,7 +15,7 @@ impl Redis {
     /// XADD key [NOMKSTREAM] [KEEPREF | DELREF | ACKED] [<MAXLEN | MINID>
     ///   [= | ~] threshold [LIMIT count]] <* | id> field value [field value ...]
     /// ```
-    pub fn xadd(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn xadd(&mut self, mut args: Command) -> std::io::Result<()> {
         let err = || wrong_num_arguments("xadd");
 
         let key = args.pop_front().ok_or(err())?.hashable()?;
@@ -81,7 +81,7 @@ impl Redis {
     /// ```
     /// XREAD [COUNT count] [BLOCK milliseconds] STREAMS key [key ...] id [id ...]
     /// ```
-    pub fn xread(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn xread(&mut self, mut args: Command) -> std::io::Result<()> {
         let err = || wrong_num_arguments("xread");
 
         let method = args
@@ -194,7 +194,7 @@ impl Redis {
     /// ```
     /// XRANGE key start end [COUNT count]
     /// ```
-    pub fn xrange(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn xrange(&mut self, mut args: Command) -> std::io::Result<()> {
         let err = || wrong_num_arguments("xrange");
         let key = args.pop_front().ok_or(err())?.hashable()?;
         let mut store = self.store.lock().unwrap();
@@ -245,7 +245,7 @@ impl Redis {
     /// ```
     /// XLEN key
     /// ```
-    pub fn xlen(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn xlen(&mut self, mut args: Command) -> std::io::Result<()> {
         let store = self.store.lock().unwrap();
         let key = args
             .pop_front()

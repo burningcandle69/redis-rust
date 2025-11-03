@@ -1,6 +1,6 @@
 use super::value::Value;
 use crate::resp::{Hashable, RESP};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -15,14 +15,18 @@ pub struct RedisStore {
     pub expiry_time: HashMap<Hashable, std::time::Instant>,
 }
 
+pub type Command = VecDeque<RESP>;
+
 pub struct Redis {
     pub io: Box<dyn ReadWrite>,
     pub store: Arc<Mutex<RedisStore>>,
+    pub is_transaction: bool,
+    pub transaction: Vec<Command>
 }
 
 impl Redis {
     pub fn new(io: Box<dyn ReadWrite>, store: Arc<Mutex<RedisStore>>) -> Self {
-        Redis { io, store }
+        Redis { io, store, is_transaction: false, transaction: vec![] }
     }
 
     pub fn handle(&mut self) -> std::io::Result<()> {
@@ -70,7 +74,7 @@ impl Redis {
             if let Some(cmd) = cmd.array() {
                 #[cfg(debug_assertions)]
                 println!("{cmd:?}");
-
+                
                 let cmd = cmd.into_iter().collect();
 
                 if let Some(err) = self.execute(cmd).err() {

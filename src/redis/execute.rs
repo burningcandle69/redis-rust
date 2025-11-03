@@ -1,11 +1,15 @@
 use super::Redis;
+use super::Command;
 use super::errors::{syntax_error, wrong_num_arguments};
 use super::utils::make_io_error;
 use crate::resp::RESP;
-use std::collections::VecDeque;
 
 impl Redis {
-    pub fn execute(&mut self, mut cmd: VecDeque<RESP>) -> std::io::Result<()> {
+    pub fn execute(&mut self, mut cmd: Command) -> std::io::Result<()> {
+        if self.is_transaction {
+            return self.transaction(cmd);
+        }
+        
         let name = cmd
             .pop_front()
             .ok_or(make_io_error("ERR expected command got nothing"))?
@@ -29,6 +33,7 @@ impl Redis {
             "xread" => self.xread(cmd),
             "xlen" => self.xlen(cmd),
             "incr" => self.incr(cmd),
+            "multi" => self.multi(cmd),
             _ => self.invalid(cmd),
         }
     }
@@ -39,7 +44,7 @@ impl Redis {
     /// ```
     /// TYPE key
     /// ```
-    fn redis_type(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+    fn redis_type(&mut self, mut args: Command) -> std::io::Result<()> {
         let key = args
             .pop_front()
             .ok_or(wrong_num_arguments("type"))?
@@ -58,7 +63,7 @@ impl Redis {
     /// ```
     /// ECHO message
     /// ```
-    fn echo(&mut self, args: VecDeque<RESP>) -> std::io::Result<()> {
+    fn echo(&mut self, args: Command) -> std::io::Result<()> {
         write!(self.io, "{}", args[0])
     }
 
@@ -66,12 +71,12 @@ impl Redis {
     /// ```
     /// PING [message]
     /// ```
-    fn ping(&mut self, _: VecDeque<RESP>) -> std::io::Result<()> {
+    fn ping(&mut self, _: Command) -> std::io::Result<()> {
         let resp: RESP = "PONG".into();
         write!(self.io, "{resp}")
     }
 
-    fn invalid(&mut self, _: VecDeque<RESP>) -> std::io::Result<()> {
+    fn invalid(&mut self, _: Command) -> std::io::Result<()> {
         let resp = RESP::None;
         write!(self.io, "{resp}")
     }
