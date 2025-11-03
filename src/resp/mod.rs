@@ -8,5 +8,5 @@ mod resp;
 pub use debug::*;
 pub use display::*;
 pub use resp::Hashable;
-pub use resp::Result;
 pub use resp::RESP;
+pub use resp::Result;

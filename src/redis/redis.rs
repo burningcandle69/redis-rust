@@ -67,7 +67,10 @@ impl Redis {
     fn parse(&mut self, data: &[u8]) -> std::io::Result<usize> {
         if let Some((parsed, cmd)) = RESP::parse(data) {
             if let Some(cmd) = cmd.array() {
+                
+                #[cfg(debug_assertions)]
                 println!("{cmd:?}");
+                
                 if let Some(err) = self.execute(cmd).err() {
                     let e = RESP::SimpleError(format!("{err}"));
                     write!(self.io, "{e}")?;

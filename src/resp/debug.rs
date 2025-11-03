@@ -1,6 +1,6 @@
 use super::RESP;
 use crate::resp::resp::Hashable;
-use std::fmt::{write, Debug, Formatter};
+use std::fmt::{Debug, Formatter, write};
 
 impl Debug for RESP {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

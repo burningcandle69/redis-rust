@@ -1,5 +1,5 @@
-use super::utils::make_io_error;
 use super::Redis;
+use super::utils::make_io_error;
 use crate::resp::RESP;
 use std::ops::Add;
 use std::time::Duration;
@@ -33,6 +33,8 @@ impl Redis {
         write!(self.io, "{resp}")
     }
 
+    /// Gets value from the key value store
+    /// return null bulk string if not found
     pub fn get(&mut self, mut args: Vec<RESP>) -> std::io::Result<()> {
         self.remove_expired();
         let store = self.store.lock().unwrap();
@@ -45,6 +47,8 @@ impl Redis {
         }
     }
 
+    /// Removes expired keys from the kv store
+    /// keys are stored in heap wrt their expiration time
     pub fn remove_expired(&mut self) {
         let mut store = self.store.lock().unwrap();
         while !store.expiry.is_empty() {
