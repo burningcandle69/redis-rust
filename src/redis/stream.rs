@@ -97,38 +97,45 @@ impl Redis {
         let method = args.remove(0).string().unwrap().to_lowercase();
 
         let mut time_out: u128 = if method == "block" {
-            let r = args
-                .remove(0)
-                .string()
-                .unwrap()
-                .parse()
-                .unwrap();
+            let r = args.remove(0).string().unwrap().parse().unwrap();
             let _streams = args.remove(0).string().unwrap();
             r
         } else {
             1
         };
-        
+
         if time_out == 0 {
             time_out = u128::MAX;
         }
-        
+
         let now = std::time::Instant::now();
 
         let stream_count = args.len() / 2;
         let keys: Vec<RESP> = args.drain(0..stream_count).collect();
         let mut starts = vec![];
-        
-        for arg in args {
-            let start = arg.string().unwrap();
-            let start = if start == "-" {
-                StreamEntryID {time: 0, sqn: 0}
+
+        for key in &keys {
+            let start = args.remove(0).string().unwrap();
+            let start = if start == "$" {
+                let mut store = self.store.lock().unwrap();
+                let stream = store
+                    .kv
+                    .entry(key.clone().hashable())
+                    .or_insert(Value::new_stream())
+                    .stream_mut()
+                    .unwrap();
+                stream
+                    .last()
+                    .map(|v| v.id)
+                    .unwrap_or(StreamEntryID { time: 0, sqn: 0 })
+            } else if start == "-" {
+                StreamEntryID { time: 0, sqn: 0 }
             } else {
                 StreamEntryID::implicit(start)
             };
             starts.push(start)
         }
-        
+
         while now.elapsed().as_millis() < time_out {
             let mut store = self.store.lock().unwrap();
 
@@ -153,7 +160,7 @@ impl Redis {
                     .into();
                 result.push(vec![key.clone(), resp].into())
             }
-            
+
             if result.len() == 0 {
                 drop(store);
                 sleep(Duration::from_millis(1));
@@ -161,7 +168,7 @@ impl Redis {
             }
 
             let resp: RESP = result.into();
-            return write!(self.io, "{resp}")
+            return write!(self.io, "{resp}");
         }
 
         let resp = RESP::null_array();
