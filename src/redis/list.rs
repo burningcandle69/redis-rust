@@ -69,7 +69,7 @@ impl Redis {
         if time_out == 0.0 {
             time_out = f64::INFINITY;
         }
-
+        
         while now.elapsed().as_secs_f64() < time_out {
             let mut store = self.store.lock().unwrap();
             let list = match store.list.get_mut(&key) {
@@ -77,7 +77,8 @@ impl Redis {
                 None => continue,
             };
             if let Some(v) = list.pop_front() {
-                return write!(self.io, "{v}");
+                let resp: RESP = vec![key.into(), v].into();
+                return write!(self.io, "{resp}");
             }
             sleep(Duration::from_millis(1));
         }

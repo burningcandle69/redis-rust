@@ -131,3 +131,15 @@ impl Into<RESP> for Vec<RESP> {
         RESP::Array(self)
     }
 }
+
+impl Into<RESP> for Hashable {
+    fn into(self) -> RESP {
+        match self {
+            Hashable::String(s) => RESP::BulkString(s),
+            Hashable::Integer(i) => RESP::Integer(i),
+            Hashable::Array(a) => RESP::Array(a.into_iter().map(|v| v.into()).collect()),
+            Hashable::Boolean(b) => RESP::Boolean(b),
+            Hashable::None => RESP::None
+        }
+    }
+}
