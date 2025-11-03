@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+#[derive(Clone)]
 pub enum RESP {
     SimpleString(String),                // +
     BulkString(String),                  // $
@@ -110,5 +111,23 @@ impl Into<RESP> for String {
 impl Into<RESP> for &str {
     fn into(self) -> RESP {
         RESP::SimpleString(self.to_string())
+    }
+}
+
+impl Into<RESP> for usize {
+    fn into(self) -> RESP {
+        RESP::Integer(self as isize)
+    }
+}
+
+impl Into<RESP> for isize {
+    fn into(self) -> RESP {
+        RESP::Integer(self)
+    }
+}
+
+impl Into<RESP> for Vec<RESP> {
+    fn into(self) -> RESP {
+        RESP::Array(self)
     }
 }

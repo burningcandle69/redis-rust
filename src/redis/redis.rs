@@ -1,25 +1,27 @@
 use crate::resp::{Hashable, RESP};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
 
 pub trait ReadWrite: Read + Write {}
 
 impl ReadWrite for TcpStream {}
 
+pub struct RedisStore {
+    pub kv: HashMap<Hashable, RESP>,
+    pub expiry: BTreeMap<std::time::Instant, Hashable>,
+    pub list: HashMap<Hashable, Vec<RESP>>,
+}
+
 pub struct Redis {
     pub io: Box<dyn ReadWrite>,
-    pub store: HashMap<Hashable, RESP>,
-    pub expiry: BTreeMap<std::time::Instant, Hashable>,
+    pub store: Arc<Mutex<RedisStore>>,
 }
 
 impl Redis {
-    pub fn new(io: Box<dyn ReadWrite>) -> Self {
-        Redis {
-            io,
-            store: HashMap::new(),
-            expiry: BTreeMap::new(),
-        }
+    pub fn new(io: Box<dyn ReadWrite>, store: Arc<Mutex<RedisStore>>) -> Self {
+        Redis { io, store }
     }
 
     pub fn handle(&mut self) -> std::io::Result<()> {
