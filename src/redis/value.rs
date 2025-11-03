@@ -95,6 +95,8 @@ impl StreamEntryID {
         StreamEntryID { time, sqn }
     }
 
+    /// Create `StreamEntryID` from explicit string
+    /// of the form <time_in_milliseconds>-<sequence_number>
     pub fn explicit(s: String) -> Self {
         let tqn: Vec<usize> = s.split("-").map(|v| v.parse().unwrap()).collect();
         StreamEntryID {

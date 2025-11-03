@@ -2,7 +2,6 @@ use super::Redis;
 use crate::redis::utils::make_io_error;
 use crate::redis::value::Value;
 use crate::resp::RESP;
-use std::collections::VecDeque;
 use std::thread::sleep;
 use std::time::Duration;
 

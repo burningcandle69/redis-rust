@@ -90,4 +90,43 @@ impl Redis {
 
         write!(self.io, "{resp}")
     }
+
+    pub fn xread(&mut self, mut args: Vec<RESP>) -> std::io::Result<()> {
+        let mut store = self.store.lock().unwrap();
+        assert!(
+            args.remove(0).string().unwrap().to_lowercase() == "streams",
+            "streams keyword should be there"
+        );
+
+        let stream_count = args.len() / 2;
+        let keys: Vec<RESP> = args.drain(0..stream_count).collect();
+
+        let mut result: Vec<RESP> = vec![];
+        for key in keys {
+            let stream = store
+                .kv
+                .entry(key.clone().hashable())
+                .or_insert(Value::new_stream())
+                .stream_mut()
+                .unwrap();
+            let start = args.remove(0).string().unwrap();
+            let start = if start == "-" {
+                0
+            } else {
+                let id = StreamEntryID::implicit(start);
+                stream.partition_point(|x| x.id <= id)
+            };
+            let resp: RESP = stream
+                .get(start..)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|v| v.clone().into())
+                .collect::<Vec<_>>()
+                .into();
+            result.push(vec![key, resp].into())
+        }
+
+        let resp: RESP = result.into();
+        write!(self.io, "{resp}")
+    }
 }

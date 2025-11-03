@@ -22,6 +22,7 @@ impl Redis {
             "type" => self.redis_type(cmd),
             "xadd" => self.xadd(cmd),
             "xrange" => self.xrange(cmd),
+            "xread" => self.xread(cmd),
             _ => self.invalid(cmd),
         }
     }
