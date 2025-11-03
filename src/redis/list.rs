@@ -93,6 +93,7 @@ impl Redis {
                 let resp: RESP = vec![key.into(), v].into();
                 return write!(self.io, "{resp}");
             }
+            drop(store);
             sleep(Duration::from_millis(1));
         }
 

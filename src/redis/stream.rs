@@ -3,6 +3,8 @@ use crate::redis::utils::make_io_error;
 use crate::redis::value::{StreamEntry, StreamEntryID, Value};
 use crate::resp::RESP;
 use std::collections::HashMap;
+use std::thread::sleep;
+use std::time::Duration;
 
 impl Redis {
     pub fn xadd(&mut self, mut args: Vec<RESP>) -> std::io::Result<()> {
@@ -92,41 +94,73 @@ impl Redis {
     }
 
     pub fn xread(&mut self, mut args: Vec<RESP>) -> std::io::Result<()> {
-        let mut store = self.store.lock().unwrap();
-        assert!(
-            args.remove(0).string().unwrap().to_lowercase() == "streams",
-            "streams keyword should be there"
-        );
+        let method = args.remove(0).string().unwrap().to_lowercase();
+
+        let time_out: u128 = if method == "block" {
+            let r = args
+                .remove(0)
+                .string()
+                .unwrap()
+                .parse()
+                .unwrap();
+            let _streams = args.remove(0).string().unwrap();
+            r
+        } else {
+            1
+        };
+        
+        let now = std::time::Instant::now();
 
         let stream_count = args.len() / 2;
         let keys: Vec<RESP> = args.drain(0..stream_count).collect();
-
-        let mut result: Vec<RESP> = vec![];
-        for key in keys {
-            let stream = store
-                .kv
-                .entry(key.clone().hashable())
-                .or_insert(Value::new_stream())
-                .stream_mut()
-                .unwrap();
-            let start = args.remove(0).string().unwrap();
+        let mut starts = vec![];
+        
+        for arg in args {
+            let start = arg.string().unwrap();
             let start = if start == "-" {
-                0
+                StreamEntryID {time: 0, sqn: 0}
             } else {
-                let id = StreamEntryID::implicit(start);
-                stream.partition_point(|x| x.id <= id)
+                StreamEntryID::implicit(start)
             };
-            let resp: RESP = stream
-                .get(start..)
-                .unwrap_or_default()
-                .into_iter()
-                .map(|v| v.clone().into())
-                .collect::<Vec<_>>()
-                .into();
-            result.push(vec![key, resp].into())
+            starts.push(start)
+        }
+        
+        while now.elapsed().as_millis() < time_out {
+            let mut store = self.store.lock().unwrap();
+
+            let mut result: Vec<RESP> = vec![];
+            for (key, start) in keys.iter().zip(starts.iter()) {
+                let stream = store
+                    .kv
+                    .entry(key.clone().hashable())
+                    .or_insert(Value::new_stream())
+                    .stream_mut()
+                    .unwrap();
+                let start = stream.partition_point(|x| &x.id <= start);
+                if stream[start..].len() == 0 {
+                    continue;
+                }
+                let resp: RESP = stream
+                    .get(start..)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|v| v.clone().into())
+                    .collect::<Vec<_>>()
+                    .into();
+                result.push(vec![key.clone(), resp].into())
+            }
+            
+            if result.len() == 0 {
+                drop(store);
+                sleep(Duration::from_millis(1));
+                continue;
+            }
+
+            let resp: RESP = result.into();
+            return write!(self.io, "{resp}")
         }
 
-        let resp: RESP = result.into();
+        let resp = RESP::null_array();
         write!(self.io, "{resp}")
     }
 }
