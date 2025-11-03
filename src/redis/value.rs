@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub enum Value {
-    String(RESP),
+    String(String),
     List(VecDeque<RESP>),
     Set(HashSet<RESP>),
     ZSet,
@@ -108,7 +108,18 @@ impl StreamEntryID {
 
 impl Into<Value> for RESP {
     fn into(self) -> Value {
-        Value::String(self)
+        let res = match self {
+            RESP::SimpleString(s) => s,
+            RESP::BulkString(s) => s,
+            RESP::SimpleError(e) => e,
+            RESP::BulkError(e) => e,
+            RESP::Integer(i) => i.to_string(),
+            RESP::Boolean(b) => b.to_string(),
+            RESP::Double(d) => d.to_string(),
+            RESP::BigNumber(b) => b,
+            _ => panic!("")
+        };
+        Value::String(res)
     }
 }
 
@@ -134,7 +145,14 @@ impl Value {
         Value::Stream(vec![])
     }
 
-    pub fn string(&self) -> Option<&RESP> {
+    pub fn string(&self) -> Option<&String> {
+        match self {
+            Value::String(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn string_mut(&mut self) -> Option<&mut String> {
         match self {
             Value::String(s) => Some(s),
             _ => None,

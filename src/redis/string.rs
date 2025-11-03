@@ -1,5 +1,6 @@
 use super::Redis;
-use crate::redis::errors::{syntax_error, wrong_num_arguments, wrong_type};
+use super::errors::{out_of_range, syntax_error, wrong_num_arguments, wrong_type};
+use crate::redis::value::Value;
 use crate::resp::RESP;
 use std::collections::VecDeque;
 use std::ops::Add;
@@ -64,11 +65,40 @@ impl Redis {
             .ok_or(wrong_num_arguments("get"))?
             .hashable()?;
         if let Some(v) = store.kv.get(&key) {
-            let resp = v.string().ok_or(wrong_type())?;
+            let resp: RESP = v.string().ok_or(wrong_type())?.clone().into();
             write!(self.io, "{resp}")
         } else {
             write!(self.io, "{}", RESP::null_bulk_string())
         }
+    }
+
+    /// Increments the number stored at key by one. If the key does not exist, 
+    /// it is set to 0 before performing the operation. An error is returned if 
+    /// the key contains a value of the wrong type or contains a string that can 
+    /// not be represented as integer. This operation is limited to 64 bit signed integers.
+    /// ```
+    /// INCR key
+    /// ```
+    pub fn incr(&mut self, mut args: VecDeque<RESP>) -> std::io::Result<()> {
+        let key = args
+            .pop_front()
+            .ok_or(wrong_num_arguments("incr"))?
+            .hashable()?;
+        let mut store = self.store.lock().unwrap();
+        let val = store
+            .kv
+            .entry(key)
+            .or_insert(Value::String("0".into()))
+            .string_mut()
+            .ok_or(out_of_range())?;
+        let mut result_value: isize = val.parse().ok()
+            .ok_or(out_of_range())?;
+        result_value += 1;
+        
+        // let v = .string().ok_or(out_of_range())?
+        *val = result_value.to_string();
+        let resp: RESP = result_value.into();
+        write!(self.io, "{resp}")
     }
 
     /// Removes expired keys from the kv store

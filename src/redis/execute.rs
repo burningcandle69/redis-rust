@@ -1,7 +1,7 @@
 use super::Redis;
-use crate::redis::errors::{syntax_error, wrong_num_arguments};
+use super::errors::{syntax_error, wrong_num_arguments};
+use super::utils::make_io_error;
 use crate::resp::RESP;
-use crate::utils::make_io_error;
 use std::collections::VecDeque;
 
 impl Redis {
@@ -28,6 +28,7 @@ impl Redis {
             "xrange" => self.xrange(cmd),
             "xread" => self.xread(cmd),
             "xlen" => self.xlen(cmd),
+            "incr" => self.incr(cmd),
             _ => self.invalid(cmd),
         }
     }

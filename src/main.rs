@@ -1,6 +1,5 @@
 mod redis;
 mod resp;
-mod utils;
 
 use crate::redis::RedisStore;
 use redis::Redis;
@@ -14,7 +13,7 @@ fn main() -> std::io::Result<()> {
     let redis_store = Arc::new(Mutex::new(RedisStore {
         kv: Default::default(),
         expiry_queue: Default::default(),
-        expiry_time: Default::default()
+        expiry_time: Default::default(),
     }));
 
     for stream in listener.incoming() {

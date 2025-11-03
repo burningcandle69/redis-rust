@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use crate::utils::make_io_error;
+use super::utils::make_io_error;
 use std::io::Error;
 
 pub fn wrong_type() -> Error {

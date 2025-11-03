@@ -72,16 +72,16 @@ impl RESP {
                 let mut v = vec![];
                 for ai in a {
                     v.push(ai.hashable()?);
-                } 
+                }
                 Array(v)
-            },
+            }
             RESP::Boolean(b) => Boolean(b),
             RESP::BigNumber(s) => String(s),
             RESP::VerbatimString((_, v)) => String(v),
             RESP::None => None,
             _ => return Err(std::io::ErrorKind::InvalidData)?,
         };
-        
+
         Ok(r)
     }
 

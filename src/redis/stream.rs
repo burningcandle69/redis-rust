@@ -1,8 +1,8 @@
-use crate::redis::Redis;
-use crate::redis::errors::{syntax_error, wrong_num_arguments, wrong_type};
-use crate::redis::value::{StreamEntry, StreamEntryID, Value};
+use super::Redis;
+use super::errors::{syntax_error, wrong_num_arguments, wrong_type};
+use super::utils::make_io_error;
+use super::value::{StreamEntry, StreamEntryID, Value};
 use crate::resp::RESP;
-use crate::utils::make_io_error;
 use std::collections::{HashMap, VecDeque};
 use std::thread::sleep;
 use std::time::Duration;

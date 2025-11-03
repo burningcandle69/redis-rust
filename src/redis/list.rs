@@ -1,6 +1,6 @@
 use super::Redis;
-use crate::redis::errors::{syntax_error, wrong_num_arguments, wrong_type};
-use crate::redis::value::Value;
+use super::errors::{syntax_error, wrong_num_arguments, wrong_type};
+use super::value::Value;
 use crate::resp::RESP;
 use std::collections::VecDeque;
 use std::thread::sleep;
@@ -60,8 +60,7 @@ impl Redis {
             .entry(key)
             .or_insert(Value::new_list())
             .list_mut()
-            .unwrap();
-        e.append(&mut args);
+            .ok_or(wrong_type())?;
         for v in args {
             e.push_front(v);
         }
@@ -100,7 +99,7 @@ impl Redis {
             } else if count == 1 {
                 write!(self.io, "{}", list.pop_front().unwrap())
             } else {
-                let res: Vec<_> = (0..count).map(|_| list.pop_front().unwrap()).collect();
+                let res: Vec<_> = list.drain(0..count).collect();
                 let resp: RESP = res.into();
                 write!(self.io, "{resp}")
             }
