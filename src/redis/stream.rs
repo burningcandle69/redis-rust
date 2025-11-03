@@ -96,7 +96,7 @@ impl Redis {
     pub fn xread(&mut self, mut args: Vec<RESP>) -> std::io::Result<()> {
         let method = args.remove(0).string().unwrap().to_lowercase();
 
-        let time_out: u128 = if method == "block" {
+        let mut time_out: u128 = if method == "block" {
             let r = args
                 .remove(0)
                 .string()
@@ -108,6 +108,10 @@ impl Redis {
         } else {
             1
         };
+        
+        if time_out == 0 {
+            time_out = u128::MAX;
+        }
         
         let now = std::time::Instant::now();
 
