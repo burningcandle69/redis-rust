@@ -37,10 +37,12 @@ impl Redis {
         if end < 0 {
             end += n as isize;
         }
-        let end = n.min(end as usize + 1);
+        let start = 0.max(start) as usize; 
+        let end = 0.max(end) as usize;
+        let end = n.min(end + 1);
 
         let resp: RESP = list
-            .get(start as usize..end)
+            .get(start ..end)
             .ok_or(make_io_error("index out of bounds"))?
             .to_vec()
             .into();
