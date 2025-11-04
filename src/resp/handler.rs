@@ -18,7 +18,7 @@ impl RESPHandler {
     }
 
     pub fn send(&mut self, val: RESP) -> std::io::Result<()> {
-        write!(self.io, "{val}")
+        self.io.write_all(&val.as_bytes())
     }
 }
 
