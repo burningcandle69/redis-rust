@@ -1,14 +1,15 @@
 mod errors;
 mod execute;
+pub mod info;
 mod list;
 mod redis;
 mod stream;
 mod string;
+mod transaction;
 mod utils;
 mod value;
-mod transaction;
-mod info;
 
+pub use redis::Command;
 pub use redis::Redis;
 pub use redis::RedisStore;
-pub use redis::Command;
+pub use info::{Role, Info};

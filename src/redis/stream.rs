@@ -1,14 +1,14 @@
-use super::{Redis, Command};
 use super::errors::{syntax_error, wrong_num_arguments, wrong_type};
-use std::cmp::Ordering;
-use std::fmt::{Display, Formatter};
-use std::time::{SystemTime, UNIX_EPOCH};
 use super::utils::make_io_error;
-use super::value::{Value};
-use crate::resp::{TypedNone, RESP};
-use std::collections::{HashMap};
+use super::value::Value;
+use super::{Command, Redis};
+use crate::resp::{RESP, TypedNone};
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::thread::sleep;
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub struct StreamEntry {
@@ -21,7 +21,6 @@ pub struct StreamEntryID {
     pub time: usize,
     pub sqn: usize,
 }
-
 
 impl Redis {
     /// Appends the specified stream entry to the stream at the specified key.
@@ -42,9 +41,7 @@ impl Redis {
             .or_insert(Value::new_stream())
             .stream_mut()
             .ok_or(wrong_type())?;
-        let id = args
-            .pop_front()
-            .ok_or(err())?;
+        let id = args.pop_front().ok_or(err())?;
         let mut data = HashMap::new();
         while args.len() > 0 {
             let key = args.pop_front().ok_or(err())?;
@@ -97,10 +94,7 @@ impl Redis {
     pub fn xread(&mut self, mut args: Command) -> std::io::Result<RESP> {
         let err = || wrong_num_arguments("xread");
 
-        let method = args
-            .pop_front()
-            .ok_or(err())?
-            .to_lowercase();
+        let method = args.pop_front().ok_or(err())?.to_lowercase();
 
         let mut time_out: u128 = if method == "block" {
             let timeout_value = args
@@ -108,9 +102,7 @@ impl Redis {
                 .ok_or(err())?
                 .parse()
                 .map_err(|_| syntax_error())?;
-            let _streams = args
-                .pop_front()
-                .ok_or(err())?;
+            let _streams = args.pop_front().ok_or(err())?;
             timeout_value
         } else {
             1
@@ -127,9 +119,7 @@ impl Redis {
         let mut starts = vec![];
 
         for key in &keys {
-            let start = args
-                .pop_front()
-                .ok_or(err())?;
+            let start = args.pop_front().ok_or(err())?;
             let start = if start == "$" {
                 let mut store = self.store.lock().unwrap();
                 let stream = store
@@ -210,12 +200,8 @@ impl Redis {
                 "WRONGTYPE Operation against a key holding the wrong kind of value",
             ))?;
 
-        let start = args
-            .pop_front()
-            .ok_or(err())?;
-        let end = args
-            .pop_front()
-            .ok_or(err())?;
+        let start = args.pop_front().ok_or(err())?;
+        let end = args.pop_front().ok_or(err())?;
 
         let start = if start == "-" {
             0
@@ -246,9 +232,7 @@ impl Redis {
     /// ```
     pub fn xlen(&mut self, mut args: Command) -> std::io::Result<RESP> {
         let store = self.store.lock().unwrap();
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("xlen"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("xlen"))?;
 
         let n: RESP = match store.kv.get(&key).and_then(|v| v.stream()) {
             Some(l) => l.len(),

@@ -22,4 +22,3 @@ impl Debug for RESP {
         }
     }
 }
-

@@ -1,8 +1,8 @@
-use super::Redis;
 use super::Command;
+use super::Redis;
 use super::errors::{syntax_error, wrong_num_arguments, wrong_type};
 use super::value::Value;
-use crate::resp::{TypedNone, RESP};
+use crate::resp::{RESP, TypedNone};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -22,9 +22,7 @@ impl Redis {
     /// ```
     pub fn rpush(&mut self, mut args: Command) -> std::io::Result<RESP> {
         let mut store = self.store.lock().unwrap();
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("rpush"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("rpush"))?;
         let e = store
             .kv
             .entry(key)
@@ -32,7 +30,7 @@ impl Redis {
             .list_mut()
             .ok_or(wrong_type())?;
         args.into_iter().for_each(|v| e.push_back(v.into()));
-        
+
         Ok(e.len().into())
     }
 
@@ -50,9 +48,7 @@ impl Redis {
     /// ```
     pub fn lpush(&mut self, mut args: Command) -> std::io::Result<RESP> {
         let mut store = self.store.lock().unwrap();
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("lpush"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("lpush"))?;
         let e = store
             .kv
             .entry(key)
@@ -73,9 +69,7 @@ impl Redis {
     /// LPOP key [count]
     /// ```
     pub fn lpop(&mut self, mut args: Command) -> std::io::Result<RESP> {
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("lpop"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("lpop"))?;
         let count: usize = args
             .pop_front()
             .unwrap_or("1".into())
@@ -94,9 +88,9 @@ impl Redis {
                 res.into()
             }
         } else {
-           RESP::None(TypedNone::String)
+            RESP::None(TypedNone::String)
         };
-        
+
         Ok(res)
     }
 
@@ -130,7 +124,7 @@ impl Redis {
             };
             if let Some(v) = list.pop_front() {
                 let resp: RESP = vec![key.into(), v].into();
-                return Ok(resp)
+                return Ok(resp);
             }
             drop(store);
             sleep(Duration::from_millis(1));
@@ -162,16 +156,8 @@ impl Redis {
             .unwrap();
         let n = list.len();
 
-        let mut start: isize = args
-            .pop_front()
-            .ok_or(err())?
-            .parse()
-            .unwrap();
-        let mut end: isize = args
-            .pop_front()
-            .ok_or(err())?
-            .parse()
-            .unwrap();
+        let mut start: isize = args.pop_front().ok_or(err())?.parse().unwrap();
+        let mut end: isize = args.pop_front().ok_or(err())?.parse().unwrap();
 
         if start < 0 {
             start += n as isize;
@@ -196,9 +182,7 @@ impl Redis {
     /// ```
     pub fn llen(&mut self, mut args: Command) -> std::io::Result<RESP> {
         let store = self.store.lock().unwrap();
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("llen"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("llen"))?;
 
         let n: RESP = match store.kv.get(&key).and_then(|v| v.list()) {
             Some(l) => l.len(),

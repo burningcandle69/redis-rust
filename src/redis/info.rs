@@ -1,21 +1,24 @@
-use std::fmt::{Display, Formatter};
 use super::{Command, Redis};
 use crate::resp::RESP;
+use std::fmt::{Display, Formatter};
+use std::net::Ipv4Addr;
 
 #[derive(Default)]
 pub struct Info {
     pub connected_client: usize,
-    pub role: Role
+    pub role: Role,
 }
 
 pub enum Role {
     Master,
-    Slave
+    Slave((Ipv4Addr, usize)),
 }
 
 impl Redis {
     pub fn info(&mut self, mut cmd: Command) -> std::io::Result<RESP> {
-        Ok(RESP::BulkString(self.store.lock().unwrap().info.to_string())) 
+        Ok(RESP::BulkString(
+            self.store.lock().unwrap().info.to_string(),
+        ))
     }
 }
 
@@ -29,6 +32,14 @@ impl Display for Info {
     }
 }
 
+impl Info {
+    pub fn from_role(role: Role) -> Self {
+        Info {
+            connected_client: 0, role
+        } 
+    }
+}
+
 impl Default for Role {
     fn default() -> Self {
         Role::Master
@@ -39,7 +50,7 @@ impl Display for Role {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Role::Master => write!(f, "master"),
-            Role::Slave => write!(f, "slave")
+            Role::Slave(_) => write!(f, "slave"),
         }
     }
 }

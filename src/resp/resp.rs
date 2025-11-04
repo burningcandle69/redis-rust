@@ -5,26 +5,26 @@ use std::marker::PhantomData;
 pub enum TypedNone {
     String,
     Array,
-    Nil    
+    Nil,
 }
 
 #[derive(Clone)]
 pub enum RESP {
-    SimpleString(String),                // +
-    BulkString(String),                  // $
-    SimpleError(String),                 // -
-    BulkError(String),                   // !
-    Integer(isize),                      // :
-    Array(Vec<RESP>),                    // *
-    Boolean(bool),                       // #
-    Double(f64),                         // ,
-    BigNumber(String),                   // (
-    VerbatimString((String, String)),    // =
+    SimpleString(String),              // +
+    BulkString(String),                // $
+    SimpleError(String),               // -
+    BulkError(String),                 // !
+    Integer(isize),                    // :
+    Array(Vec<RESP>),                  // *
+    Boolean(bool),                     // #
+    Double(f64),                       // ,
+    BigNumber(String),                 // (
+    VerbatimString((String, String)),  // =
     Map(HashMap<String, RESP>),        // %
     Attributes(HashMap<String, RESP>), // |
     Set(HashSet<String>),              // ~
-    Push(Vec<RESP>),                     // >
-    None(TypedNone),                                // _
+    Push(Vec<RESP>),                   // >
+    None(TypedNone),                   // _
 }
 
 impl Default for RESP {

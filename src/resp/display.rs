@@ -1,7 +1,7 @@
 use super::RESP;
+use crate::resp::resp::TypedNone;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
-use crate::resp::resp::TypedNone;
 
 impl Display for RESP {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -104,7 +104,7 @@ impl RESP {
         match n {
             TypedNone::String => write!(f, "$-1\r\n"),
             TypedNone::Array => write!(f, "*-1\r\n"),
-            TypedNone::Nil => write!(f, "_\r\n")
+            TypedNone::Nil => write!(f, "_\r\n"),
         }
     }
 }

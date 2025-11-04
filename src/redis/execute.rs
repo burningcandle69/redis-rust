@@ -1,15 +1,15 @@
-use super::Redis;
 use super::Command;
-use super::errors::{wrong_num_arguments};
+use super::Redis;
+use super::errors::wrong_num_arguments;
 use super::utils::make_io_error;
-use crate::resp::{TypedNone, RESP};
+use crate::resp::{RESP, TypedNone};
 
 impl Redis {
     pub fn execute(&mut self, mut cmd: Command) -> std::io::Result<RESP> {
         if self.is_transaction {
             return self.transaction(cmd);
         }
-        
+
         let name = cmd
             .pop_front()
             .ok_or(make_io_error("ERR expected command got nothing"))?;
@@ -33,12 +33,8 @@ impl Redis {
             "xlen" => self.xlen(cmd),
             "incr" => self.incr(cmd),
             "multi" => self.multi(cmd),
-            "exec" => {
-                Err(make_io_error("ERR EXEC without MULTI"))
-            }
-            "discard" => {
-                Err(make_io_error("ERR DISCARD without MULTI"))
-            }
+            "exec" => Err(make_io_error("ERR EXEC without MULTI")),
+            "discard" => Err(make_io_error("ERR DISCARD without MULTI")),
             _ => self.invalid(cmd),
         }
     }
@@ -50,11 +46,9 @@ impl Redis {
     /// TYPE key
     /// ```
     fn redis_type(&mut self, mut args: Command) -> std::io::Result<RESP> {
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("type"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("type"))?;
         let store = self.store.lock().unwrap();
-        let resp  = store
+        let resp = store
             .kv
             .get(&key)
             .map(|v| v.redis_type())

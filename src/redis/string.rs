@@ -1,8 +1,8 @@
-use super::Redis;
 use super::Command;
+use super::Redis;
 use super::errors::{out_of_range, syntax_error, wrong_num_arguments, wrong_type};
 use super::value::Value;
-use crate::resp::{TypedNone, RESP};
+use crate::resp::{RESP, TypedNone};
 use std::ops::Add;
 use std::time::Duration;
 
@@ -17,14 +17,12 @@ impl Redis {
     pub fn set(&mut self, mut args: Command) -> std::io::Result<RESP> {
         let err = || wrong_num_arguments("set");
         let mut store = self.store.lock().unwrap();
-        let key  = args.pop_front().ok_or(err())?;
+        let key = args.pop_front().ok_or(err())?;
         let value = args.pop_front().ok_or(wrong_num_arguments("set"))?;
         store.kv.insert(key.clone(), value.into());
 
         if args.len() > 0 {
-            let unit = args
-                .pop_front()
-                .ok_or(err())?;
+            let unit = args.pop_front().ok_or(err())?;
             let mut time = args
                 .pop_front()
                 .ok_or(err())?
@@ -55,30 +53,26 @@ impl Redis {
         self.remove_expired();
         let store = self.store.lock().unwrap();
 
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("get"))?;
-        
+        let key = args.pop_front().ok_or(wrong_num_arguments("get"))?;
+
         let resp = if let Some(v) = store.kv.get(&key) {
-             v.string().ok_or(wrong_type())?.clone().into()
+            v.string().ok_or(wrong_type())?.clone().into()
         } else {
             RESP::None(TypedNone::String)
         };
-        
+
         Ok(resp)
     }
 
-    /// Increments the number stored at key by one. If the key does not exist, 
-    /// it is set to 0 before performing the operation. An error is returned if 
-    /// the key contains a value of the wrong type or contains a string that can 
+    /// Increments the number stored at key by one. If the key does not exist,
+    /// it is set to 0 before performing the operation. An error is returned if
+    /// the key contains a value of the wrong type or contains a string that can
     /// not be represented as integer. This operation is limited to 64 bit signed integers.
     /// ```
     /// INCR key
     /// ```
     pub fn incr(&mut self, mut args: Command) -> std::io::Result<RESP> {
-        let key = args
-            .pop_front()
-            .ok_or(wrong_num_arguments("incr"))?;
+        let key = args.pop_front().ok_or(wrong_num_arguments("incr"))?;
         let mut store = self.store.lock().unwrap();
         let val = store
             .kv
@@ -86,10 +80,9 @@ impl Redis {
             .or_insert(Value::String("0".into()))
             .string_mut()
             .ok_or(out_of_range())?;
-        let mut result_value: isize = val.parse().ok()
-            .ok_or(out_of_range())?;
+        let mut result_value: isize = val.parse().ok().ok_or(out_of_range())?;
         result_value += 1;
-        
+
         // let v = .string().ok_or(out_of_range())?
         *val = result_value.to_string();
         Ok(result_value.into())

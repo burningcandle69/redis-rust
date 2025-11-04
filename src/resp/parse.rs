@@ -1,5 +1,5 @@
-use super::resp::{TypedNone, RESP};
 use super::resp::Result;
+use super::resp::{RESP, TypedNone};
 use std::collections::{HashMap, HashSet};
 
 impl RESP {

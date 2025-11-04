@@ -1,27 +1,43 @@
 mod redis;
 mod resp;
 
-use crate::redis::RedisStore;
+use crate::redis::{Info, RedisStore, Role};
 use redis::Redis;
-use std::net::TcpListener;
+use std::net::{Ipv4Addr, TcpListener};
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 fn main() -> std::io::Result<()> {
     let args: Vec<_> = std::env::args().collect();
+
+    let port = if let Some(idx) = args.iter().position(|v| v == "--port") {
+        args[idx + 1].parse().unwrap()
+    } else {
+        6379
+    };
     
-    let mut port = 6379;
-    if let Some(idx) = args.iter().position(|v| v=="--port") {
-        port = args[idx + 1].parse().unwrap();
-    }
-    
+    let role = if let Some(idx) = args.iter().position(|v| v == "--replicaof") {
+        let mut addr = args[idx + 1].split(" ");
+        let ip_str = addr.next().unwrap();
+        let ip = if ip_str == "localhost" {
+            Ipv4Addr::from_str("127.0.0.1").unwrap()
+        } else {
+            Ipv4Addr::from_str(ip_str).unwrap()
+        };
+        let port: usize = addr.next().unwrap().parse().unwrap();
+        Role::Slave((ip, port))
+    } else {
+        Role::Master
+    };
+
     let listener = TcpListener::bind(format!("127.0.0.1:{port}"))?;
 
     let redis_store = Arc::new(Mutex::new(RedisStore {
         kv: Default::default(),
         expiry_queue: Default::default(),
         expiry_time: Default::default(),
-        info: Default::default()
+        info: Info::from_role(role),
     }));
 
     for stream in listener.incoming() {

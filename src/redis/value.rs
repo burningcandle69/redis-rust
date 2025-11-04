@@ -1,6 +1,6 @@
-use crate::resp::{RESP};
-use std::collections::{HashSet, VecDeque};
 use crate::redis::stream::StreamEntry;
+use crate::resp::RESP;
+use std::collections::{HashSet, VecDeque};
 
 pub enum Value {
     String(String),
@@ -11,7 +11,6 @@ pub enum Value {
     Stream(Vec<StreamEntry>),
     VectorSet,
 }
-
 
 impl Into<Value> for String {
     fn into(self) -> Value {

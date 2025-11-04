@@ -1,12 +1,12 @@
+use super::errors::syntax_error;
+use super::info::Info;
 use super::value::Value;
-use crate::resp::{RESP};
+use crate::resp::RESP;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::ops::{Add, AddAssign, SubAssign};
 use std::sync::{Arc, Mutex};
-use super::errors::syntax_error;
-use super::info::Info;
 
 pub trait ReadWrite: Read + Write {}
 
@@ -25,17 +25,27 @@ pub struct Redis {
     pub io: Box<dyn ReadWrite>,
     pub store: Arc<Mutex<RedisStore>>,
     pub is_transaction: bool,
-    pub transaction: Vec<Command>
+    pub transaction: Vec<Command>,
 }
 
 impl Redis {
     pub fn new(io: Box<dyn ReadWrite>, store: Arc<Mutex<RedisStore>>) -> Self {
-        Redis { io, store, is_transaction: false, transaction: vec![] }
+        Redis {
+            io,
+            store,
+            is_transaction: false,
+            transaction: vec![],
+        }
     }
 
     pub fn handle(&mut self) {
-        self.store.lock().unwrap().info.connected_client.add_assign(1);
-        
+        self.store
+            .lock()
+            .unwrap()
+            .info
+            .connected_client
+            .add_assign(1);
+
         let mut buf = vec![0; 1024];
         let mut read_bytes = 0;
         #[allow(unused)]
@@ -50,7 +60,12 @@ impl Redis {
 
             let n = self.io.read(&mut buf[read_bytes..]).unwrap_or(0);
             if n == 0 {
-                self.store.lock().unwrap().info.connected_client.sub_assign(1);
+                self.store
+                    .lock()
+                    .unwrap()
+                    .info
+                    .connected_client
+                    .sub_assign(1);
                 return;
             }
 
@@ -81,7 +96,7 @@ impl Redis {
             if let Some(cmd) = cmd.array() {
                 #[cfg(debug_assertions)]
                 println!("{cmd:?}");
-                
+
                 let mut args = VecDeque::new();
                 for c in cmd {
                     match c.string() {
@@ -93,7 +108,7 @@ impl Redis {
                         }
                     };
                 }
-                
+
                 match self.execute(args) {
                     Ok(resp) => write!(self.io, "{resp}")?,
                     Err(err) => {
