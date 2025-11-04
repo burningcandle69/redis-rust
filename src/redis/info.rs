@@ -11,6 +11,7 @@ pub struct Info {
     pub offset: isize,
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Role {
     Master,
     Slave,

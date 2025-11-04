@@ -4,13 +4,16 @@ use super::value::Value;
 use crate::resp::ReadWrite;
 use crate::resp::{RESPHandler, RESP};
 use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::io::{PipeWriter, Write};
 use std::net::TcpStream;
 use std::ops::{AddAssign, SubAssign};
 use std::sync::{Arc, Mutex};
+use crate::redis::Role;
 
 impl ReadWrite for TcpStream {}
 
 pub struct RedisStore {
+    pub slaves: HashMap<usize, PipeWriter>,
     pub kv: HashMap<String, Value>,
     pub info: Info,
     pub expiry_queue: BTreeMap<std::time::Instant, String>,
@@ -50,12 +53,28 @@ impl Redis {
             .info
             .connected_client
             .add_assign(1);
+        
+        let role = self.store.lock().unwrap().info.role;
 
         loop {
             let cmd = match self.resp.next() {
                 Some(v) => v,
                 None => break,
             };
+            
+            if role == Role::Master {
+                let mut closed = vec![];
+
+                for (i, pipe) in &mut self.store.lock().unwrap().slaves {
+                    if pipe.write_all(&cmd.as_bytes()).is_err() {
+                        closed.push(i.clone());
+                    }
+                }
+
+                for c in closed {
+                    self.store.lock().unwrap().slaves.remove(&c);
+                }
+            }
 
             if let Some(cmd) = cmd.array() {
                 #[cfg(debug_assertions)]

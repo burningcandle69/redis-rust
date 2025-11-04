@@ -2,6 +2,7 @@ mod redis;
 mod resp;
 mod slave;
 
+use std::collections::HashMap;
 use crate::redis::{Info, RedisStore, Role};
 use crate::slave::Slave;
 use rand::{distr::Alphanumeric, Rng};
@@ -20,6 +21,7 @@ fn main() -> std::io::Result<()> {
     };
 
     let redis_store = Arc::new(Mutex::new(RedisStore {
+        slaves: HashMap::new(),
         kv: Default::default(),
         expiry_queue: Default::default(),
         expiry_time: Default::default(),

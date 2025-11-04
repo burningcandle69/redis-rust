@@ -1,7 +1,10 @@
-use crate::redis::RedisStore;
+use std::collections::VecDeque;
+use std::io::{pipe};
+use crate::redis::{syntax_error, Redis, RedisStore};
 use crate::resp::{RESPHandler, RESP};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpStream};
 use std::sync::{Arc, Mutex};
+use super::utils::DevNull;
 
 pub struct Slave {
     pub master: (Ipv4Addr, u16),
@@ -64,6 +67,42 @@ impl Slave {
         self.io.send(message)?;
         let response = self.io.next().unwrap();
         println!("psync-response: {response}");
+        
+        let mut redis = Redis::new(Box::new(DevNull), self.store.clone());
+        
+        loop {
+            let cmd = match self.io.next() {
+                Some(v) => v,
+                None => break
+            };
+
+            if let Some(cmd) = cmd.array() {
+                #[cfg(debug_assertions)]
+                println!("{cmd:?}");
+
+                let mut args = VecDeque::new();
+                for c in cmd {
+                    match c.string() {
+                        Some(v) => args.push_back(v),
+                        None => {
+                            let e = RESP::SimpleError(syntax_error().to_string());
+                            // redis.resp.send(e)?;
+                            return Ok(());
+                        }
+                    };
+                }
+
+                match redis.execute(args) {
+                    Ok(res) => {
+                        // redis.resp.send(res)
+                    },
+                    Err(err) => {
+                        // let e = RESP::SimpleError(format!("{err}"));
+                        // redis.resp.send(e)
+                    }
+                };
+            }
+        }
         // assert_eq!(response.to_lowercase(), "ok");
         Ok(())
     }

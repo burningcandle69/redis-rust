@@ -1,8 +1,9 @@
+use std::io::{pipe, Read};
 use super::{Command, Redis};
 use crate::redis::errors::wrong_num_arguments;
 use crate::redis::redis::SlaveConfig;
 use crate::resp::{TypedNone, RESP};
-
+use rand::Rng;
 
 const EMPTY_RDB: &str = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2";
 
@@ -28,11 +29,21 @@ impl Redis {
         }
     }
 
-    pub fn psync(&mut self, mut args: Command) -> std::io::Result<RESP> {
+    pub fn psync(&mut self, _: Command) -> std::io::Result<RESP> {
         let repl_id = self.store.lock().unwrap().info.master_id.clone();
         let sync_status: RESP = format!("FULLRESYNC {repl_id} 0").as_str().into();
         self.resp.send(sync_status)?;
+        
         let res = hex::decode(EMPTY_RDB).unwrap(); 
-        Ok(RESP::RDB(res))
+        self.resp.send(RESP::RDB(res))?;
+        
+        let (mut pi, po) = pipe()?;
+        self.store.lock().unwrap().slaves.insert(rand::rng().random_range(..usize::MAX), po);
+        let mut buf = vec![0u8; 1024];
+        
+        loop {
+            let n = pi.read(&mut buf)?; 
+            self.resp.send_bytes(&buf[..n])?;
+        }
     }
 }

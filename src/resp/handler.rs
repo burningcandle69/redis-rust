@@ -1,5 +1,6 @@
 use super::resp::RESP;
 use std::io::{Read, Write};
+
 pub struct RESPHandler {
     io: Box<dyn ReadWrite>,
     read_bytes: usize,
@@ -19,6 +20,10 @@ impl RESPHandler {
 
     pub fn send(&mut self, val: RESP) -> std::io::Result<()> {
         self.io.write_all(&val.as_bytes())
+    }
+    
+    pub fn send_bytes(&mut self, data: &[u8]) -> std::io::Result<()> {
+        self.io.write_all(data)
     }
 }
 
