@@ -57,3 +57,28 @@ impl Iterator for RESPHandler {
         }
     }
 }
+
+impl RESPHandler {
+    pub fn next_rdb(&mut self) -> Option<RESP> {
+        loop {
+            if let Some((mut parsed, cmd)) = RESP::parse_rdb(&self.buf[1.min(self.read_bytes)..self.read_bytes]) {
+                parsed += 1;
+                self.buf.copy_within(parsed..self.read_bytes, 0);
+                self.read_bytes -= parsed;
+                return Some(cmd);
+            }
+
+            if self.read_bytes == self.buf.len() {
+                self.buf.resize(self.buf.len() * 2, 0);
+            }
+
+            let n = match self.io.read(&mut self.buf[self.read_bytes..]) {
+                Ok(0) => return None, // EOF
+                Ok(n) => n,
+                Err(_) => return None, // TODO: maybe handle differently
+            };
+
+            self.read_bytes += n;
+        }
+    }
+}

@@ -91,8 +91,8 @@ impl Redis {
                     for c in closed {
                         self.store.lock().unwrap().slaves.remove(&c);
                     }
-                }
-
+                }                 
+                
                 match self.execute(args) {
                     Ok(res) => self.resp.send(res),
                     Err(err) => {

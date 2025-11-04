@@ -65,8 +65,14 @@ impl Slave {
 
         let message = RESP::from(vec!["PSYNC".into(), repl_id, offset.to_string()]);
         self.io.send(message)?;
+        
         let response = self.io.next().unwrap();
-        println!("psync-response: {response}");
+        #[cfg(debug_assertions)]
+        print!("psync-response: {response}");
+        
+        let rdb_file = self.io.next_rdb();
+        #[cfg(debug_assertions)]
+        println!("rdb_file: {rdb_file:?}");
         
         let mut redis = Redis::new(Box::new(DevNull), self.store.clone());
         

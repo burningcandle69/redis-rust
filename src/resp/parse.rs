@@ -151,6 +151,16 @@ impl RESP {
 
         Some((parsed, RESP::Set(res)))
     }
+    
+    pub fn parse_rdb(data: &[u8]) -> Result {
+        let (mut parsed, length) = Self::parse_integer(data)?;
+        let length = length.int()? as usize;
+        if data[parsed..].len() < length {
+            return None;
+        }
+        parsed += length;
+        Some((parsed, RESP::RDB(data[parsed - length .. parsed].to_vec())))
+    }
 
     fn parse_push(data: &[u8]) -> Result {
         let (parsed, res) = Self::parse_array(data)?;
