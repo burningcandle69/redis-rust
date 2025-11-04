@@ -57,28 +57,15 @@ impl Redis {
         let role = self.store.lock().unwrap().info.role;
 
         loop {
-            let cmd = match self.resp.next() {
+            let comd = match self.resp.next() {
                 Some(v) => v,
                 None => break,
             };
             
-            if role == Role::Master {
-                let mut closed = vec![];
-
-                for (i, pipe) in &mut self.store.lock().unwrap().slaves {
-                    if pipe.write_all(&cmd.as_bytes()).is_err() {
-                        closed.push(i.clone());
-                    }
-                }
-
-                for c in closed {
-                    self.store.lock().unwrap().slaves.remove(&c);
-                }
-            }
-
-            if let Some(cmd) = cmd.array() {
+            if let Some(cmd) = comd.clone().array() {
                 #[cfg(debug_assertions)]
                 println!("{cmd:?}");
+
 
                 let mut args = VecDeque::new();
                 for c in cmd {
@@ -90,6 +77,20 @@ impl Redis {
                             return Ok(());
                         }
                     };
+                }
+
+                if role == Role::Master && is_write_command(&args[0]) {
+                    let mut closed = vec![];
+
+                    for (i, pipe) in &mut self.store.lock().unwrap().slaves {
+                        if pipe.write_all(&comd.as_bytes()).is_err() {
+                            closed.push(i.clone());
+                        }
+                    }
+
+                    for c in closed {
+                        self.store.lock().unwrap().slaves.remove(&c);
+                    }
                 }
 
                 match self.execute(args) {
@@ -110,5 +111,12 @@ impl Redis {
             .sub_assign(1);
 
         Ok(())
+    }
+}
+
+fn is_write_command(cmd: &str) -> bool {
+    match cmd.to_lowercase().as_str() {
+        "set" | "del" => true,
+        _ => false
     }
 }
