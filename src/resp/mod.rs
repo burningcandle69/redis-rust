@@ -2,11 +2,12 @@
 
 mod debug;
 mod display;
-mod parse;
+pub mod parse;
 mod resp;
 
 pub use debug::*;
 pub use display::*;
+pub use parse::RESPHandler;
 pub use resp::RESP;
 pub use resp::Result;
 pub use resp::TypedNone;

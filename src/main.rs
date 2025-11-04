@@ -1,8 +1,10 @@
 mod redis;
 mod resp;
+mod slave;
 
 use crate::redis::{Info, RedisStore, Role};
-use rand::{distr::Alphanumeric, Rng};
+use crate::slave::Slave;
+use rand::{Rng, distr::Alphanumeric};
 use redis::Redis;
 use std::net::{Ipv4Addr, TcpListener};
 use std::str::FromStr;
@@ -26,8 +28,10 @@ fn main() -> std::io::Result<()> {
         } else {
             Ipv4Addr::from_str(ip_str).unwrap()
         };
-        let port: usize = addr.next().unwrap().parse().unwrap();
-        Role::Slave((ip, port))
+        let port: u16 = addr.next().unwrap().parse().unwrap();
+        let mut slave = Slave::new(ip, port)?;
+        slave.handle();
+        Role::Slave
     } else {
         Role::Master
     };
@@ -51,9 +55,8 @@ fn main() -> std::io::Result<()> {
         match stream {
             Ok(stream) => {
                 let store = redis_store.clone();
-                thread::spawn(|| {
-                    let mut redis = Redis::new(Box::new(stream), store);
-                    redis.handle()
+                thread::spawn(|| -> std::io::Result<()> {
+                     Redis::new(Box::new(stream), store).handle()
                 });
                 println!("accepted new connection");
             }
