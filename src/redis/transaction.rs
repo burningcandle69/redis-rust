@@ -20,7 +20,10 @@ impl Redis {
 
                 let mut res = vec![];
                 for v in commands {
-                    res.push(self.execute(v)?);
+                    match self.execute(v) {
+                        Ok(r) => res.push(r),
+                        Err(e) => res.push(RESP::SimpleError(format!("{e}")))
+                    }
                 }
 
                 Ok(res.into())
