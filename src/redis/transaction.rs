@@ -10,22 +10,30 @@ impl Redis {
     }
 
     pub fn transaction(&mut self, cmd: Command) -> std::io::Result<RESP> {
-        if cmd.get(0).ok_or(wrong_num_arguments("exec"))?.to_lowercase() != "exec" {
-            self.transaction.push(cmd);
-            Ok("QUEUED".into())
-        } else {
-            self.is_transaction = false;
-            let commands: Vec<_> = self.transaction.drain( ..).collect();
+        match cmd.get(0).ok_or(wrong_num_arguments("exec"))?.to_lowercase().as_str() {
+            "exec" => {
+                self.is_transaction = false;
+                let commands: Vec<_> = self.transaction.drain( ..).collect();
 
-            #[cfg(debug_assertions)]
-            println!("running queued commands: \n{:?}", commands);
+                #[cfg(debug_assertions)]
+                println!("running queued commands: \n{:?}", commands);
 
-            let mut res = vec![];
-            for v in commands {
-                res.push(self.execute(v)?);
+                let mut res = vec![];
+                for v in commands {
+                    res.push(self.execute(v)?);
+                }
+
+                Ok(res.into())
             }
-            
-            Ok(res.into())
+            "discard" => {
+                self.transaction.drain(..);
+                self.is_transaction = false;
+                Ok("OK".into())
+            }
+            _ => {
+                self.transaction.push(cmd);
+                Ok("QUEUED".into())
+            }
         }
     }
 }

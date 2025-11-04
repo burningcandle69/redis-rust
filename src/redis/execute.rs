@@ -35,6 +35,9 @@ impl Redis {
             "exec" => {
                 Err(make_io_error("ERR EXEC without MULTI"))
             }
+            "discard" => {
+                Err(make_io_error("ERR DISCARD without MULTI"))
+            }
             _ => self.invalid(cmd),
         }
     }
