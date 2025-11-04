@@ -9,8 +9,11 @@ const EMPTY_RDB: &str = "524544495330303131fa0972656469732d76657205372e322e30fa0
 
 impl Redis {
     pub fn replconf(&mut self, mut args: Command) -> std::io::Result<RESP> {
-        let key = args.pop_front().ok_or(wrong_num_arguments("replconf"))?;
-        if key == "listening-port" {
+        let key = args.pop_front().ok_or(wrong_num_arguments("replconf"))?.to_lowercase();
+        if key == "getack" {
+            let offset = self.store.lock().unwrap().info.offset.max(0);
+            Ok(RESP::Push(vec!["REPLCONF".into(), "ACK".into(), offset.to_string().into()]))
+        } else if key == "listening-port" {
             let port: u16 = args
                 .pop_front()
                 .ok_or(wrong_num_arguments("replconf"))?

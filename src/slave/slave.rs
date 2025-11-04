@@ -76,6 +76,8 @@ impl Slave {
         
         let mut redis = Redis::new(Box::new(DevNull), self.store.clone());
         
+        self.io.parsed_bytes = 0;
+        
         loop {
             let cmd = match self.io.next() {
                 Some(v) => v,
@@ -100,6 +102,9 @@ impl Slave {
 
                 match redis.execute(args) {
                     Ok(res) => {
+                        if let RESP::Push(v) = res {
+                            self.io.send(v.into())?;
+                        }
                         // redis.resp.send(res)
                     },
                     Err(err) => {
@@ -108,6 +113,8 @@ impl Slave {
                     }
                 };
             }
+            
+            self.store.lock().unwrap().info.offset = self.io.parsed_bytes as isize;
         }
         // assert_eq!(response.to_lowercase(), "ok");
         Ok(())
