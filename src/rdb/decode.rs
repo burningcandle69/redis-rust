@@ -11,16 +11,6 @@ pub struct RDBParser<'a> {
     bytes: Cursor<&'a [u8]>,
 }
 
-fn system_to_instant(t: SystemTime) -> Instant {
-    let now_sys = SystemTime::now();
-    let now_inst = Instant::now();
-
-    match t.duration_since(now_sys) {
-        Ok(dur) => now_inst + dur,         // future time
-        Err(e) => now_inst - e.duration(), // past time
-    }
-}
-
 impl<'a> RDBParser<'a> {
     pub fn parse_file(path: PathBuf) -> Result<RDB, Error> {
         let data = Bytes::from(std::fs::read(path)?);
@@ -57,16 +47,16 @@ impl<'a> RDBParser<'a> {
                                 let expiry = UNIX_EPOCH + Duration::from_secs(time as u64);
                                 let (k, v) = parser.parse_key_value();
                                 rdb_file.database.insert(k.clone(), v);
-                                rdb_file.expiry_time.insert(k, system_to_instant(expiry));
+                                rdb_file.expiry_time.insert(k, expiry);
                             }
                             0xFC => {
                                 parser.bytes.advance(1);
                                 // expiry time in milliseconds
                                 let time = parser.bytes.get_u64_le();
-                                let expiry = UNIX_EPOCH + Duration::from_secs(time);
+                                let expiry = UNIX_EPOCH + Duration::from_millis(time);
                                 let (k, v) = parser.parse_key_value();
                                 rdb_file.database.insert(k.clone(), v);
-                                rdb_file.expiry_time.insert(k, system_to_instant(expiry));
+                                rdb_file.expiry_time.insert(k, expiry);
                             }
                             0x00 => {
                                 let (k, v) = parser.parse_key_value();

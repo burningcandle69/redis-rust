@@ -55,7 +55,7 @@ impl Server {
             if unit.to_lowercase() == "ex" {
                 time *= 1000;
             }
-            let expiry_time = std::time::Instant::now().add(Duration::from_millis(time));
+            let expiry_time = std::time::SystemTime::now().add(Duration::from_millis(time));
             store.expiry_queue.insert(expiry_time, key.clone());
             store.expiry_time.insert(key, expiry_time);
         } else {
@@ -100,7 +100,7 @@ pub async fn remove_expired(store: Arc<Mutex<Store>>) {
             Some(v) => v,
             None => break,
         };
-        if t > std::time::Instant::now() {
+        if t > std::time::SystemTime::now() {
             store.expiry_queue.insert(t, key);
             break;
         }

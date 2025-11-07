@@ -13,8 +13,8 @@ pub struct Store {
     pub kv: HashMap<String, Value>,
     pub slave_offsets: HashMap<usize, usize>,
     pub slave_asked_offsets: HashMap<usize, usize>,
-    pub expiry_queue: BTreeMap<std::time::Instant, String>,
-    pub expiry_time: HashMap<String, std::time::Instant>,
+    pub expiry_queue: BTreeMap<std::time::SystemTime, String>,
+    pub expiry_time: HashMap<String, std::time::SystemTime>,
 }
 
 pub enum Value {

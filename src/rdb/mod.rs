@@ -8,5 +8,5 @@ pub struct RDB {
     pub header: String,
     pub metadata: HashMap<String, String>,
     pub database: HashMap<String, Value>,
-    pub expiry_time: HashMap<String, std::time::Instant>,
+    pub expiry_time: HashMap<String, std::time::SystemTime>,
 }
