@@ -1,3 +1,4 @@
+use crate::rdb::decode::RDBParser;
 use crate::server::server::Server;
 use crate::store::{Info, Role, Store};
 use bytes::BytesMut;
@@ -5,6 +6,7 @@ use rand::Rng;
 use rand::distr::Alphanumeric;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -12,6 +14,7 @@ use tokio::sync::Mutex;
 
 mod frame;
 mod parser;
+mod rdb;
 mod server;
 mod slave;
 mod store;
@@ -28,7 +31,7 @@ fn get_arg_value(args: &[String], key: &str) -> Option<String> {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let args: Vec<_> = std::env::args().collect();
-    
+
     let mut info = Info::default();
     let port = get_arg_value(&args, "--port")
         .and_then(|v| v.parse().ok())
@@ -37,10 +40,19 @@ async fn main() -> Result<(), Error> {
     info.dir = get_arg_value(&args, "--dir").unwrap_or_default();
     info.db_filename = get_arg_value(&args, "--dbfilename").unwrap_or_default();
 
+    let mut file_path = PathBuf::from(&info.dir);
+    file_path.push(&info.db_filename);
+    let rdb_file = RDBParser::parse_file(file_path).unwrap_or_default();
+
     let redis_store = Arc::new(Mutex::new(Store {
-        kv: Default::default(),
-        expiry_queue: Default::default(),
-        expiry_time: Default::default(),
+        kv: rdb_file.database,
+        expiry_queue: rdb_file
+            .expiry_time
+            .clone()
+            .into_iter()
+            .map(|(k, v)| (v, k))
+            .collect(),
+        expiry_time: rdb_file.expiry_time,
         info,
         broadcast: None,
         get_ack_channel: None,

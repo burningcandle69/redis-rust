@@ -4,12 +4,12 @@ use std::collections::VecDeque;
 
 mod errors;
 mod list;
+mod persistence;
 mod replication;
 pub mod server;
 mod stream;
 mod string;
 mod transaction;
-mod persistence;
 
 type Result = std::result::Result<Frame, Error>;
 

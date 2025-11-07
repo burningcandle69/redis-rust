@@ -172,6 +172,7 @@ impl Server {
             "wait" => self.wait(args).await,
             // config
             "config" => self.config(args).await,
+            "keys" => self.keys(args).await,
             _ => self.invalid(args),
         }
     }
