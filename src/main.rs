@@ -56,6 +56,7 @@ async fn main() -> Result<(), Error> {
         info,
         broadcast: None,
         get_ack_channel: None,
+        channels: HashMap::new(),
         slave_offsets: HashMap::new(),
         slave_asked_offsets: HashMap::new(),
     }));

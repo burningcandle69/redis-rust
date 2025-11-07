@@ -17,6 +17,7 @@ use tokio::sync::{Mutex, mpsc};
 
 pub struct Server {
     pub slave_id: usize,
+    pub subscription_count: usize,
     pub store: Arc<Mutex<Store>>,
     pub output: mpsc::Sender<Frame>,
     pub transaction: VecDeque<Args>,
@@ -36,6 +37,7 @@ impl Server {
             store,
             output,
             transaction: VecDeque::new(),
+            subscription_count: 0,
             in_transaction: false,
             slave_config: None,
         }
@@ -116,14 +118,24 @@ impl Server {
             #[cfg(debug_assertions)]
             println!("command: {args:?}");
 
-            let response = if self.in_transaction {
+            let mut response = if self.in_transaction {
                 self.transaction(args).await
             } else {
                 self.execute(args).await
             };
 
             self.store.lock().await.info.recv_offset += parser.parsed_bytes;
-
+            
+            if self.subscription_count > 0 {
+                response = response.map(|r| {
+                    if r.is_array() {
+                        r 
+                    } else {
+                        vec![r, "".to_string().into()].into()
+                    }
+                });
+            } 
+            
             if self.slave_id == 0 {
                 let _ = match response {
                     Ok(v) => self.output.send(v).await,
@@ -173,6 +185,9 @@ impl Server {
             // config
             "config" => self.config(args).await,
             "keys" => self.keys(args).await,
+            // pubsub
+            "subscribe" => self.subscribe(args).await,
+            "unsubscribe" => self.unsubscribe(args).await,
             _ => self.invalid(args),
         }
     }

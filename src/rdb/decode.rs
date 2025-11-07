@@ -2,10 +2,9 @@ use super::RDB;
 use crate::Error;
 use crate::store::Value;
 use bytes::{Buf, Bytes};
-use std::collections::HashMap;
 use std::io::Cursor;
 use std::path::PathBuf;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
 pub struct RDBParser<'a> {
     bytes: Cursor<&'a [u8]>,
