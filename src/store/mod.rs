@@ -4,7 +4,7 @@ mod value;
 
 use crate::frame::Frame;
 use ordered_float::OrderedFloat;
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use tokio::sync::broadcast;
 
 pub struct Store {
@@ -32,7 +32,7 @@ pub enum Value {
 #[derive(Default)]
 pub struct ZSet {
     pub scores: HashMap<String, OrderedFloat<f64>>,
-    pub ordered: BTreeMap<OrderedFloat<f64>, String>
+    pub ordered: BTreeSet<(OrderedFloat<f64>, String)>,
 }
 
 #[derive(Clone)]

@@ -1,6 +1,5 @@
 use super::{StreamEntry, Value, ZSet};
 use crate::frame::Frame;
-use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap, HashSet, VecDeque};
 
 macro_rules! impl_getter {
