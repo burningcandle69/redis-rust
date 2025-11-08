@@ -23,10 +23,16 @@ pub enum Value {
     String(String),
     List(VecDeque<Frame>),
     Set(HashSet<Frame>),
-    ZSet(BTreeMap<OrderedFloat<f64>, Frame>),
+    ZSet(ZSet),
     Hash,
     Stream(Vec<StreamEntry>),
     VectorSet,
+}
+
+#[derive(Default)]
+pub struct ZSet {
+    pub scores: HashMap<String, OrderedFloat<f64>>,
+    pub ordered: BTreeMap<OrderedFloat<f64>, String>
 }
 
 #[derive(Clone)]

@@ -2,7 +2,7 @@ use super::server::Server;
 use super::{Args, Result};
 use crate::frame::{Frame, TypedNone};
 use crate::server::errors::{syntax_error, wrong_num_arguments, wrong_type};
-use crate::store::Value;
+use crate::store::{Value, ZSet};
 use ordered_float::OrderedFloat;
 use std::collections::BTreeMap;
 use std::str::FromStr;
@@ -28,7 +28,7 @@ impl Server {
         let set = store
             .kv
             .entry(key)
-            .or_insert(Value::ZSet(BTreeMap::new()))
+            .or_insert(Value::ZSet(ZSet::default()))
             .zset_mut()
             .ok_or(wrong_type())?;
         let mut res = 0usize;
@@ -36,8 +36,13 @@ impl Server {
             let k = args.pop_front().ok_or(syntax_error())?;
             let key = OrderedFloat::from_str(&k).map_err(|_| syntax_error())?;
             let value = args.pop_front().ok_or(syntax_error())?;
-            set.insert(key, value.into());
-            res += 1;
+            if let Some(prev_score) = set.scores.remove(&value) {
+                set.ordered.remove(&prev_score);
+            } else {
+                res += 1
+            }
+            set.scores.insert(value.clone(), key);
+            set.ordered.insert(key, value);
         }
         Ok(res.into())
     }
@@ -53,7 +58,7 @@ impl Server {
             .kv
             .get(&key)
             .and_then(|v| v.zset())
-            .map(|v| v.len())
+            .map(|v| v.scores.len())
             .unwrap_or(0);
         Ok(card.into())
     }
@@ -73,7 +78,7 @@ impl Server {
             .kv
             .get(&key)
             .and_then(|v| v.zset())
-            .map(|v| v.range(min..max).count())
+            .map(|v| v.ordered.range(min..max).count())
             .unwrap_or(0);
         Ok(count.into())
     }
@@ -89,11 +94,11 @@ impl Server {
         let key = args.pop_front().ok_or(wrong_num_arguments("zadd"))?;
         let member = args.pop_front().ok_or(wrong_num_arguments("zadd"))?;
         let set = store.kv.get(&key).unwrap().zset().ok_or(wrong_type())?;
-        if let Some((k, _)) = set
+        if let Some((k, _)) = set.ordered
             .iter()
-            .find(|(_, v)| (*v).clone().string().map(|v| v == member).unwrap_or(false))
+            .find(|(_, v)| **v == member)
         {
-            Ok(set.range(..k).count().into())
+            Ok(set.ordered.range(..k).count().into())
         } else {
             Ok(Frame::None(TypedNone::Nil))
         }
@@ -111,9 +116,9 @@ impl Server {
         let start = OrderedFloat::from_str(&args.pop_front().ok_or(wrong_num_arguments("zadd"))?)?;
         let stop = OrderedFloat::from_str(&args.pop_front().ok_or(wrong_num_arguments("zadd"))?)?;
         let set = store.kv.get(&key).unwrap().zset().ok_or(wrong_type())?;
-        Ok(set
+        Ok(set.ordered
             .range(start..stop)
-            .map(|(_, v)| (*v).clone().string().unwrap_or("".into()))
+            .map(|(_, v)| v.clone())
             .collect::<Vec<String>>()
             .into())
     }
