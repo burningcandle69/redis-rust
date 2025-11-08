@@ -116,17 +116,17 @@ impl Server {
     /// ZRANGE key start stop [BYSCORE | BYLEX] [REV] [LIMIT offset count] [WITHSCORES]
     /// ```
     pub async fn zrange(&mut self, mut args: Args) -> Result {
-        let err = || wrong_num_arguments("lrange");
-        
+        let err = || wrong_num_arguments("zrange");
+
         let store = self.store.lock().await;
-        let key = args.pop_front().ok_or(wrong_num_arguments("zadd"))?;
-        let set = if let Some(v)  = store.kv.get(&key) {
-              v.zset().ok_or(wrong_type())?
+        let key = args.pop_front().ok_or(err())?;
+        let set = if let Some(v) = store.kv.get(&key) {
+            v.zset().ok_or(wrong_type())?
         } else {
             &ZSet::default()
         };
         let n = set.ordered.len();
-        
+
         let mut start: isize = args.pop_front().ok_or(err())?.parse().unwrap();
         let mut end: isize = args.pop_front().ok_or(err())?.parse().unwrap();
 
@@ -139,10 +139,12 @@ impl Server {
         let start = 0.max(start) as usize;
         let end = 0.max(end) as usize;
         let end = n.min(end + 1);
-        
+
         Ok(set
             .ordered
-            .iter().skip(start).take(end - start)
+            .iter()
+            .skip(start)
+            .take(end - start)
             .map(|(_, v)| v.clone())
             .collect::<Vec<String>>()
             .into())
@@ -165,6 +167,18 @@ impl Server {
     /// ZSCORE key member
     /// ```
     pub async fn zscore(&mut self, mut args: Args) -> Result {
-        todo!()
+        let err = || wrong_num_arguments("zscore");
+
+        let store = self.store.lock().await;
+        let key = args.pop_front().ok_or(err())?;
+        let member = args.pop_front().ok_or(err())?;
+
+        if let Some(v) = store.kv.get(&key)
+            && let Some(score) = v.zset().ok_or(wrong_type())?.scores.get(&member)
+        {
+            Ok(score.0.to_string().into())
+        } else {
+            Ok(Frame::None(TypedNone::String))
+        }
     }
 }
