@@ -116,14 +116,33 @@ impl Server {
     /// ZRANGE key start stop [BYSCORE | BYLEX] [REV] [LIMIT offset count] [WITHSCORES]
     /// ```
     pub async fn zrange(&mut self, mut args: Args) -> Result {
+        let err = || wrong_num_arguments("lrange");
+        
         let store = self.store.lock().await;
         let key = args.pop_front().ok_or(wrong_num_arguments("zadd"))?;
-        let start = OrderedFloat::from_str(&args.pop_front().ok_or(wrong_num_arguments("zadd"))?)?;
-        let stop = OrderedFloat::from_str(&args.pop_front().ok_or(wrong_num_arguments("zadd"))?)?;
-        let set = store.kv.get(&key).unwrap().zset().ok_or(wrong_type())?;
+        let set = if let Some(v)  = store.kv.get(&key) {
+              v.zset().ok_or(wrong_type())?
+        } else {
+            &ZSet::default()
+        };
+        let n = set.ordered.len();
+        
+        let mut start: isize = args.pop_front().ok_or(err())?.parse().unwrap();
+        let mut end: isize = args.pop_front().ok_or(err())?.parse().unwrap();
+
+        if start < 0 {
+            start += n as isize;
+        }
+        if end < 0 {
+            end += n as isize;
+        }
+        let start = 0.max(start) as usize;
+        let end = 0.max(end) as usize;
+        let end = n.min(end + 1);
+        
         Ok(set
             .ordered
-            .range(&(start, "".into())..&(stop, S.into()))
+            .iter().skip(start).take(end - start)
             .map(|(_, v)| v.clone())
             .collect::<Vec<String>>()
             .into())
