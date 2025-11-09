@@ -93,7 +93,9 @@ impl Server {
                 response.push(res);
             }
         } else {
-            return Ok(Frame::None(TypedNone::String));
+            for member in args {
+                response.push(Frame::None(TypedNone::Array));
+            }
         }
         Ok(response.into())
     }

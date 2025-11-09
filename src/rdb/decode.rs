@@ -61,7 +61,7 @@ impl<'a> RDBParser<'a> {
                                 let (k, v) = parser.parse_key_value();
                                 rdb_file.database.insert(k.clone(), v);
                             }
-                            _ => panic!("invalid or unimplemented"),
+                            _ => continue,
                         }
                     }
                 }
