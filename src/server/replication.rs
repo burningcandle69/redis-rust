@@ -105,7 +105,7 @@ impl Server {
             }
         });
 
-        let mut ack_reader = self
+        let ack_reader = self
             .store
             .lock()
             .await

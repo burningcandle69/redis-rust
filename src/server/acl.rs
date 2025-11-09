@@ -35,7 +35,10 @@ impl Server {
         let username = args.pop_front().ok_or(wrong_num_arguments("getuser"))?;
         if let Some(user) = self.store.lock().await.users.get(&username) {
             let mut res: Vec<Frame> = vec![];
-            for (k, v) in user {
+            let mut keys = user.keys().collect::<Vec<&String>>();
+            keys.sort();
+            for k in keys  {
+                let v = user.get(k).unwrap();
                 res.push(k.clone().into());
                 res.push(v.clone().into());
             }
