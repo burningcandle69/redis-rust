@@ -120,7 +120,7 @@ impl Server {
                 .unwrap_or("ping".into())
                 .to_lowercase();
 
-            if method != "acl" && !self.authenticated {
+            if method != "auth" && !self.authenticated {
                 let resp = Frame::SimpleError("NOAUTH Authentication required.".into());
                 self.output.send(resp).await?;
                 continue;
