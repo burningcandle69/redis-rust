@@ -15,3 +15,4 @@ tokio = { version = "1.23.0", features = ["full"] } # async networking
 atoi = "2.0.0"
 regex = "1.12.2"
 ordered-float = "5.1.0"
+sha2 = "0.10.9"

@@ -12,6 +12,7 @@ pub struct Store {
     pub broadcast: Option<broadcast::Sender<Frame>>,
     pub get_ack_channel: Option<broadcast::Sender<Frame>>,
     pub kv: HashMap<String, Value>,
+    pub users: HashMap<String, HashMap<String, Vec<String>>>,
     pub channels: HashMap<String, broadcast::Sender<Frame>>,
     pub slave_offsets: HashMap<usize, usize>,
     pub slave_asked_offsets: HashMap<usize, usize>,

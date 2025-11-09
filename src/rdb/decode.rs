@@ -20,7 +20,7 @@ impl<'a> RDBParser<'a> {
         let mut rdb_file = RDB::default();
         rdb_file.header = parser.parse_header();
         let mut key_len = 0;
-        let mut expiry_len = 0;
+        let mut _expiry_len = 0;
 
         while parser.bytes.has_remaining() {
             let section = parser.bytes.get_u8();
@@ -30,11 +30,11 @@ impl<'a> RDBParser<'a> {
                     rdb_file.metadata.insert(k, v);
                 }
                 0xFE => {
-                    let idx = parser.bytes.get_u8();
+                    let _idx = parser.bytes.get_u8();
                     if parser.bytes.get_ref()[parser.bytes.position() as usize] == 0xFB {
                         parser.bytes.advance(1);
                         key_len = parser.parse_encoded_length().unwrap();
-                        expiry_len = parser.parse_encoded_length().unwrap();
+                        _expiry_len = parser.parse_encoded_length().unwrap();
                     }
                     for _ in 0..key_len {
                         let kv_type = parser.bytes.get_ref()[parser.bytes.position() as usize];

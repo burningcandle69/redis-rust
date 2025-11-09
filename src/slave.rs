@@ -79,9 +79,9 @@ pub async fn psync(store: Arc<Mutex<Store>>, tcp: &mut TcpStream) -> Result<Byte
     loop {
         assert_eq!(cursor.get_u8(), b'+');
         match crate::frame::decode::get_line(&mut cursor) {
-            Ok(v) => {
+            Ok(_v) => {
                 #[cfg(debug_assertions)]
-                println!("psync-response: {}", String::from_utf8_lossy(v));
+                println!("psync-response: {}", String::from_utf8_lossy(_v));
                 break;
             }
             Err(crate::frame::Error::Incomplete) => {

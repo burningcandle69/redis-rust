@@ -2,8 +2,8 @@ use crate::rdb::decode::RDBParser;
 use crate::server::server::Server;
 use crate::store::{Info, Role, Store};
 use bytes::BytesMut;
-use rand::Rng;
 use rand::distr::Alphanumeric;
+use rand::Rng;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::path::PathBuf;
@@ -44,6 +44,14 @@ async fn main() -> Result<(), Error> {
     file_path.push(&info.db_filename);
     let rdb_file = RDBParser::parse_file(file_path).unwrap_or_default();
 
+    let default_users = HashMap::from([(
+        "default".into(),
+        HashMap::from([
+            ("flags".into(), vec!["nopass".into()]),
+            ("passwords".into(), vec![]),
+        ]),
+    )]);
+
     let redis_store = Arc::new(Mutex::new(Store {
         kv: rdb_file.database,
         expiry_queue: rdb_file
@@ -59,6 +67,7 @@ async fn main() -> Result<(), Error> {
         channels: HashMap::new(),
         slave_offsets: HashMap::new(),
         slave_asked_offsets: HashMap::new(),
+        users: default_users,
     }));
 
     if let Some(idx) = args.iter().position(|v| v == "--replicaof") {

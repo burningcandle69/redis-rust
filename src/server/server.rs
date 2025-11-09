@@ -1,18 +1,20 @@
-use super::Args;
 use super::errors::*;
-use crate::Error;
-use crate::frame::{Frame, encode::AsBytes};
+use super::Args;
+use crate::frame::{encode::AsBytes, Frame};
 use crate::parser::Parser;
 use crate::store::Store;
+use crate::Error;
 use bytes::BytesMut;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
-use tokio::sync::{Mutex, mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, Mutex};
 
 pub struct Server {
+    pub(crate) user: String,
+    pub(crate) authenticated: bool,
     pub(crate) slave_id: usize,
     pub(crate) subscription_count: usize,
     pub(crate) store: Arc<Mutex<Store>>,
@@ -51,6 +53,8 @@ impl Server {
             slave_id,
             store,
             output,
+            user: "default".into(),
+            authenticated: false,
             transaction: VecDeque::new(),
             unsubscribe: HashMap::new(),
             subscription_count: 0,
@@ -93,6 +97,14 @@ impl Server {
     }
 
     async fn execution_thread(&mut self, mut parser: Parser) -> Result<(), Error> {
+        if let Some(properties) = self.store.lock().await.users.get(&self.user)
+            && let Some(flags) = properties.get("flags")
+        {
+            if flags.contains(&"nopass".to_string()) {
+                self.authenticated = true;
+            }
+        }
+
         loop {
             let command = match parser.read_frame().await? {
                 Some(v) => v,
@@ -105,7 +117,14 @@ impl Server {
                 .ok_or("invalid command format!")?
                 .remove(0)
                 .string()
-                .unwrap_or("ping".into());
+                .unwrap_or("ping".into())
+                .to_lowercase();
+
+            if method != "acl" && !self.authenticated {
+                let resp = Frame::SimpleError("NOAUTH Authentication required.".into());
+                self.output.send(resp).await?;
+                continue;
+            }
 
             if self.subscription_count > 0 && !subscriber_mode_command(&method) {
                 let resp = Frame::SimpleError(format!("ERR Can't execute '{method}': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context").into());
@@ -194,7 +213,9 @@ impl Server {
             // zset
             zadd, zcard, zcount, zrank, zrange, zrem, zscore,
             // geospatial
-            geoadd, geopos, geodist, geosearch;
+            geoadd, geopos, geodist, geosearch,
+            // acl
+            acl, auth;
             "type" => self.redis_type(args).await,
             "exec" => Err(make_io_error("ERR EXEC without MULTI").into()),
             "discard" => Err(make_io_error("ERR DISCARD without MULTI").into()),
@@ -203,14 +224,14 @@ impl Server {
 }
 
 fn is_write_command(cmd: &str) -> bool {
-    match cmd.to_lowercase().as_str() {
+    match cmd {
         "set" | "del" => true,
         _ => false,
     }
 }
 
 fn subscriber_mode_command(cmd: &str) -> bool {
-    match cmd.to_lowercase().as_str() {
+    match cmd {
         "subscribe" | "unsubscribe" | "psubscribe" | "punsubscribe" | "ping" | "quit" => true,
         _ => false,
     }

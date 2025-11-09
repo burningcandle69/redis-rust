@@ -164,7 +164,10 @@ impl Server {
         let res = if let Some(v) = store.kv.get_mut(&key)
             && let Some(score) = v.zset_mut().ok_or(wrong_type())?.scores.remove(&member)
         {
-            v.zset_mut().ok_or(wrong_type())?.ordered.remove(&(score, member));
+            v.zset_mut()
+                .ok_or(wrong_type())?
+                .ordered
+                .remove(&(score, member));
             1usize
         } else {
             0

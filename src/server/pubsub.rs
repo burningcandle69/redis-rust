@@ -38,7 +38,7 @@ impl Server {
                             }
                         }
                     }
-                    value = &mut urx => {
+                    _value = &mut urx => {
                         drop(receiver);
                         println!("told to unsubscribe so stopping");
                         break

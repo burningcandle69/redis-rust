@@ -1,11 +1,9 @@
-use std::process::Command;
-use std::str::FromStr;
-use ordered_float::OrderedFloat;
-use crate::frame::{Frame, TypedNone};
 use super::errors::*;
 use super::{Args, Result};
+use crate::frame::{Frame, TypedNone};
 use crate::server::server::Server;
 use crate::store::{Value, ZSet};
+use ordered_float::OrderedFloat;
 
 const MIN_LATITUDE: f64 = -85.05112878;
 const MAX_LATITUDE: f64 = 85.05112878;
@@ -37,11 +35,27 @@ impl Server {
             .ok_or(wrong_type())?;
         let mut res = 0usize;
         while !args.is_empty() {
-            let longitude: f64 = args.pop_front().ok_or(syntax_error())?.parse().map_err(|_| syntax_error())?;
-            let latitude: f64 = args.pop_front().ok_or(syntax_error())?.parse().map_err(|_| syntax_error())?;
+            let longitude: f64 = args
+                .pop_front()
+                .ok_or(syntax_error())?
+                .parse()
+                .map_err(|_| syntax_error())?;
+            let latitude: f64 = args
+                .pop_front()
+                .ok_or(syntax_error())?
+                .parse()
+                .map_err(|_| syntax_error())?;
 
-            if longitude < MIN_LONGITUDE || longitude > MAX_LONGITUDE || latitude < MIN_LATITUDE || latitude > MAX_LATITUDE {
-                return Err(format!("ERR invalid longitude,latitude pair {},{}", longitude, latitude).into())
+            if longitude < MIN_LONGITUDE
+                || longitude > MAX_LONGITUDE
+                || latitude < MIN_LATITUDE
+                || latitude > MAX_LATITUDE
+            {
+                return Err(format!(
+                    "ERR invalid longitude,latitude pair {},{}",
+                    longitude, latitude
+                )
+                .into());
             }
 
             let key = encode(latitude, longitude);
@@ -82,8 +96,7 @@ impl Server {
         if let Some(v) = store.kv.get(&key) {
             let z = v.zset().ok_or(wrong_type())?;
             for member in args {
-                let res = if let Some(score) = z.scores.get(&member)
-                {
+                let res = if let Some(score) = z.scores.get(&member) {
                     let v = score.0 as u64;
                     let pos = decode(v);
                     vec![pos.longitude.to_string(), pos.latitude.to_string()].into()
@@ -93,7 +106,7 @@ impl Server {
                 response.push(res);
             }
         } else {
-            for member in args {
+            for _ in args {
                 response.push(Frame::None(TypedNone::Array));
             }
         }
@@ -118,10 +131,9 @@ impl Server {
             let z = v.zset().ok_or(wrong_type())?;
             let mut coors = vec![];
             for member in args {
-                if let Some(score) = z.scores.get(&member)
-                {
+                if let Some(score) = z.scores.get(&member) {
                     let v = score.0 as u64;
-                   coors.push(decode(v));
+                    coors.push(decode(v));
                 }
             }
             if coors.len() < 2 {
@@ -136,10 +148,10 @@ impl Server {
             Ok(Frame::None(TypedNone::String))
         }
     }
-    
-    /// Return the members of a sorted set populated with geospatial information using GEOADD, 
-    /// which are within the borders of the area specified by a given shape. 
-    /// This command extends the GEORADIUS command, so in addition to searching 
+
+    /// Return the members of a sorted set populated with geospatial information using GEOADD,
+    /// which are within the borders of the area specified by a given shape.
+    /// This command extends the GEORADIUS command, so in addition to searching
     /// within circular areas, it supports searching within rectangular areas.
     /// ```
     /// GEOSEARCH key <FROMMEMBER member | FROMLONLAT longitude latitude>
@@ -153,25 +165,44 @@ impl Server {
         let store = self.store.lock().await;
         let key = args.pop_front().ok_or(err())?;
         let _fromlatlont = args.pop_front();
-        let longitude: f64 = args.pop_front().ok_or(syntax_error())?.parse().map_err(|_| syntax_error())?;
-        let latitude: f64 = args.pop_front().ok_or(syntax_error())?.parse().map_err(|_| syntax_error())?;
-        let center = Coordinates {longitude, latitude};
+        let longitude: f64 = args
+            .pop_front()
+            .ok_or(syntax_error())?
+            .parse()
+            .map_err(|_| syntax_error())?;
+        let latitude: f64 = args
+            .pop_front()
+            .ok_or(syntax_error())?
+            .parse()
+            .map_err(|_| syntax_error())?;
+        let center = Coordinates {
+            longitude,
+            latitude,
+        };
         let _byradius = args.pop_front();
-        let radius: f64 = args.pop_front().ok_or(syntax_error())?.parse().map_err(|_| syntax_error())?;
-        
+        let radius: f64 = args
+            .pop_front()
+            .ok_or(syntax_error())?
+            .parse()
+            .map_err(|_| syntax_error())?;
+
         if let Some(v) = store.kv.get(&key) {
             let z = v.zset().ok_or(wrong_type())?;
-            let res = z.scores.iter().filter_map(|(k, v)| {
-                let coord = decode(v.0 as u64);
-                let distance = haversine(&center, &coord);
-                if distance <= radius {
-                    Some(k.clone())
-                } else {
-                    None
-                }
-            }).collect::<Vec<_>>();
+            let res = z
+                .scores
+                .iter()
+                .filter_map(|(k, v)| {
+                    let coord = decode(v.0 as u64);
+                    let distance = haversine(&center, &coord);
+                    if distance <= radius {
+                        Some(k.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
             Ok(res.into())
-        }  else {
+        } else {
             Ok(Frame::None(TypedNone::String))
         }
     }
@@ -217,21 +248,31 @@ fn compact_int64_to_int32(v: u64) -> u32 {
     result = (result | (result >> 2)) & 0x0F0F0F0F0F0F0F0F;
     result = (result | (result >> 4)) & 0x00FF00FF00FF00FF;
     result = (result | (result >> 8)) & 0x0000FFFF0000FFFF;
-    ((result | (result >> 16)) & 0x00000000FFFFFFFF) as u32  // Cast to u32
+    ((result | (result >> 16)) & 0x00000000FFFFFFFF) as u32 // Cast to u32
 }
 
-fn convert_grid_numbers_to_coordinates(grid_latitude_number: u32, grid_longitude_number: u32) -> Coordinates {
+fn convert_grid_numbers_to_coordinates(
+    grid_latitude_number: u32,
+    grid_longitude_number: u32,
+) -> Coordinates {
     // Calculate the grid boundaries
-    let grid_latitude_min = MIN_LATITUDE + LATITUDE_RANGE * (grid_latitude_number as f64 / 2.0_f64.powi(26));
-    let grid_latitude_max = MIN_LATITUDE + LATITUDE_RANGE * ((grid_latitude_number + 1) as f64 / 2.0_f64.powi(26));
-    let grid_longitude_min = MIN_LONGITUDE + LONGITUDE_RANGE * (grid_longitude_number as f64 / 2.0_f64.powi(26));
-    let grid_longitude_max = MIN_LONGITUDE + LONGITUDE_RANGE * ((grid_longitude_number + 1) as f64 / 2.0_f64.powi(26));
+    let grid_latitude_min =
+        MIN_LATITUDE + LATITUDE_RANGE * (grid_latitude_number as f64 / 2.0_f64.powi(26));
+    let grid_latitude_max =
+        MIN_LATITUDE + LATITUDE_RANGE * ((grid_latitude_number + 1) as f64 / 2.0_f64.powi(26));
+    let grid_longitude_min =
+        MIN_LONGITUDE + LONGITUDE_RANGE * (grid_longitude_number as f64 / 2.0_f64.powi(26));
+    let grid_longitude_max =
+        MIN_LONGITUDE + LONGITUDE_RANGE * ((grid_longitude_number + 1) as f64 / 2.0_f64.powi(26));
 
     // Calculate the center point of the grid cell
     let latitude = (grid_latitude_min + grid_latitude_max) / 2.0;
     let longitude = (grid_longitude_min + grid_longitude_max) / 2.0;
 
-    Coordinates { latitude, longitude }
+    Coordinates {
+        latitude,
+        longitude,
+    }
 }
 
 fn decode(geo_code: u64) -> Coordinates {

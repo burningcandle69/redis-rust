@@ -1,6 +1,6 @@
 use super::{StreamEntry, Value, ZSet};
 use crate::frame::Frame;
-use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 
 macro_rules! impl_getter {
     ($variant:ident, $tp:ty, $name:ident, $name_mut:ident) => {
